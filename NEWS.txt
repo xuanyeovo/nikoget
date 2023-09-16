@@ -1,0 +1,7 @@
+Nikoget update log
+
+--- Alpha 0.0.1 ---
+
+First published version
+
+* Add support for Netease Cloud Music

@@ -1,0 +1,21 @@
+[project]
+name = "nikoget"
+version = "0.0.1"
+
+description = "Download something from internet sites"
+
+authors = [
+    { name = "xuanyeovo", email = "xuanye_dev@outlook.com" }
+]
+
+dependencies = [
+    "requests>=2.1",
+    "mutagen>=1.40",
+    "colorlog",
+    "tqdm"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
