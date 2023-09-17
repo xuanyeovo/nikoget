@@ -104,6 +104,7 @@ class DownloadContext:
         self.lock = Lock()
         self._error = None
         self.mime = None
+        self.headers_ready = False
         self.total_size = 0
         self.downloaded_size = 0
 
@@ -118,7 +119,10 @@ class DownloadContext:
         def bootstrap():
             self._run_status = TaskStatus.running
 
-            result = self._bootstrap(self)
+            try:
+                result = self._bootstrap(self)
+            except Exception as err:
+                result = err
 
             if not result is None:
                 self.lock.acquire()

@@ -5,3 +5,8 @@ Nikoget update log
 First published version
 
 * Add support for Netease Cloud Music
+
+--- Alpha 0.0.2 ---
+
+* Fix a bug which makes audio file no correct extension name
+* Logs for download now show name for a descriptor rather than the URL

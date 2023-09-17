@@ -154,12 +154,14 @@ class NcmAudio(AudioDescriptor):
             url = self.ncm_cover_url
 
             logger = colorlog.getLogger('nikoget')
-            logger.info(f'Downloading cover from {url}')
+            logger.debug(f'Downloading cover from {url}')
 
             req = requests.get(url, headers=HEADERS, stream=True)
             ctx.total_size = int(req.headers['Content-Length'])
             ctx.mime = req.headers.get('Content-Type').split(';')[0]
             ctx.downloaded_size = 0
+
+            ctx.headers_ready = True
 
             for chunk in req.iter_content(chunk_size=STREAM_CHUNK_SIZE):
                 ctx.downloaded_size += len(chunk)
@@ -174,12 +176,14 @@ class NcmAudio(AudioDescriptor):
             url = self.ncm_download_url
 
             logger = colorlog.getLogger('nikoget')
-            logger.info(f'Downloading audio from {url}')
+            logger.debug(f'Downloading audio from {url}')
 
             req = requests.get(url, headers=HEADERS, stream=True)
             ctx.total_size = int(req.headers['Content-Length'])
             ctx.mime = req.headers.get('Content-Type').split(';')[0]
             ctx.downloaded_size = 0
+
+            ctx.headers_ready = True
 
             for chunk in req.iter_content(chunk_size=STREAM_CHUNK_SIZE):
                 ctx.downloaded_size += len(chunk)

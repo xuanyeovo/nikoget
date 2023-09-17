@@ -6,6 +6,7 @@ import mutagen.mp3
 import mutagen.id3
 import io
 import os
+import time
 from typing import Callable
 from tqdm import tqdm
 from nikoget import *
@@ -37,12 +38,20 @@ def download_audio(args, descriptor):
     final audio file automatically, including the album cover.
     '''
 
+    logger = colorlog.getLogger('nikoget')
+
     audio_tmpfile_path = os.path.join(args.output, 'tmp_' + descriptor.name)
     audio_fd = open(audio_tmpfile_path, 'wb')
+
+    logger.info(f'Downloading audio "{descriptor.name}"')
 
     # Start the DownloadContext
     audio_ctx = descriptor.download(audio_fd)
     audio_ctx.run()
+
+    # Wait for the mime type is ready to be read
+    while audio_ctx.headers_ready == False:
+        time.sleep(0.1)
 
     if audio_ctx.mime in MIME_EXTENSIONS:
         extension_name = MIME_EXTENSIONS[audio_ctx.mime]
@@ -63,6 +72,8 @@ def download_audio(args, descriptor):
 
     # Download the album cover
     if hasattr(descriptor, 'download_cover') and callable(descriptor.download_cover):
+        logger.info(f'Download album cover for audio "{descriptor.name}"')
+
         out = io.BytesIO()
         pbar.desc = descriptor.short_name + '(Cover Image)'
         cover_ctx = descriptor.download_cover(out)
@@ -158,6 +169,7 @@ def main():
     ))
 
     logger = colorlog.getLogger('nikoget')
+    logger.setLevel(colorlog.INFO)
     logger.addHandler(handler)
 
     parser = argparse.ArgumentParser(
