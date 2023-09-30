@@ -14,16 +14,25 @@ _VERSION = '0.0.1(20230908)'
 DATA_EXTRACTOR = re.compile('window\\.REDUX_STATE = ({.*});')
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Linux; Android 13; 23054RA19C Build/TP1A.220624.014) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.116 Mobile Safari/537.36'}
 
+ALBUM_CACHE = {}
+
 def _get_album(id):
     logger = colorlog.getLogger('nikoget')
     logger.debug(f'Fetching info about album {id}')
 
-    page_req = requests.get(f'https://y.music.163.com/m/album?id={id}', headers=HEADERS)
+    if id in ALBUM_CACHE:
+        return ALBUM_CACHE[id]
 
     result = {}
 
+    page_req = requests.get(f'https://y.music.163.com/m/album?id={id}', headers=HEADERS)
+
     if jdata := DATA_EXTRACTOR.search(page_req.text):
         info = json.loads(jdata.group(1))
+
+        if 'album' not in info['Album']:
+            raise ResolveError('Incorrect album identifier')
+
         album = info['Album']['album']
 
         def extractor(i):
@@ -34,15 +43,20 @@ def _get_album(id):
 
         result['name'] = album['name']
         result['publish_time'] = album['publishTime']
-        result['songs'] = list(map(extractor, album['songs']))
+        result['songs'] = list(map(extractor, info['Album']['songs']))
         result['artist'] = '/'.join(list(map(lambda x:x['name'], album['artists'])))
         result['publish_time'] = time.strftime('%Y/%m/%d', time.localtime(album['publishTime']))
     else:
         raise ResolveError('Cannot obtain album data from the page')
 
+    ALBUM_CACHE[id] = result
+
     return result
 
 def _get_lyrics(id):
+    '''
+    Obtain the corresponding lyrics by ID
+    '''
     logger = colorlog.getLogger('nikoget')
     logger.debug(f'Fetching lyrics of {id}')
 
@@ -76,25 +90,33 @@ class NcmPlugin(Plugin):
     def resolve_url(self, url: str):
         parsed_url = urllib.parse.urlparse(url)
         if parsed_url.netloc in ['music.163.com', 'y.music.163.com']:
-            path = parsed_url.path.split('/')
+            path = parsed_url.fragment.split('/') if '#' in url else parsed_url.path.split('/')
             if len(path) < 2:
                 raise ResolveError('Incompleted URL path')
             else:
                 del(path[0])
 
-            if path[0] == 'm':
-                # Mobile share page
+            if path[0] in ['m']:
                 del(path[0])
-                if len(path) == 1 and path[0] == 'song':
-                    query = urllib.parse.parse_qs(parsed_url.query)
-                    if id := query.get('id')[0]:
-                        return [NcmAudio(id)]
-                    else:
-                        raise ResolveError('Query field \'id\' is missing')
-                else:
-                    raise ResolveError('Incompleted mobile share URL')
+
+            query = urllib.parse.parse_qs(parsed_url.query)
+            if path[0] == 'song':
+                if len(path) == 2:
+                    return [NcmAudio.from_id(path[1])]
+                elif len(path) == 1 and 'id' in query:
+                    return [NcmAudio.from_id(query['id'][0])]
+
+            elif path[0] == 'album':
+                if len(path) == 2:
+                    return list(map(lambda x:NcmAudio.from_id(x['id']), _get_album(path[1])['songs']))
+                elif len(path) == 1 and 'id' in query:
+                    return list(map(lambda x:NcmAudio.from_id(x['id']), _get_album(query['id'][0])['songs']))
+
             else:
-                raise ResolveError('Unsupported URL path')
+                raise ResolveError('Unsupported type')
+
+            raise ResolveError('Identifier is missing')
+
 
     def id(self)-> str:
         return _ID
@@ -103,8 +125,11 @@ class NcmPlugin(Plugin):
         return _VERSION
 
 class NcmAudio(AudioDescriptor):
-    def __init__(self, id: str):
+    def __init__(self):
         super().__init__()
+
+    def from_id(id):
+        self = NcmAudio()
 
         self._id = id
 
@@ -116,6 +141,10 @@ class NcmAudio(AudioDescriptor):
             data = json.loads(result.group(1))
             self._raw_data = data
             info = data['Song']
+
+            if info == {}:
+                raise ResolveError('Incorrect song identifier')
+
             self.title = info['name']
             self.album = info['al']['name']
             self.artist = ['/'.join(list(map(lambda x:x['name'], info['ar'])))]
@@ -124,7 +153,7 @@ class NcmAudio(AudioDescriptor):
             album_info = _get_album(info['al']['id'])
             for i in range(len(album_info['songs'])):
                 if id == album_info['songs'][i]['id']:
-                    self.track_number = '{:02}'.format(i)
+                    self.track_number = '{:02}'.format(i + 1)
                     break
 
             self.album_artist = [album_info['artist']]
@@ -132,6 +161,8 @@ class NcmAudio(AudioDescriptor):
             self.lyrics = _get_lyrics(id)
         else:
             raise ResolveError('Cannot obtain audio meta info from the page')
+
+        return self
 
     @property
     def ncm_id(self):

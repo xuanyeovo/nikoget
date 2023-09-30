@@ -162,6 +162,7 @@ class AudioDescriptor(ABC):
         self.disc_number = None
         self.date = None
         self.track_number = '01'
+        self.track_number_total = None
         self.comment = None
         self.lyrics = None
 
@@ -185,13 +186,15 @@ class AudioDescriptor(ABC):
             '©nam': [self.title],
             '©ART': [self.artist_str],
             '©alb': [self.album],
-            'trkn': [self.track_number],
+            'trkn': [(int(self.track_number), int(self.track_number_total) if self.track_number_total is not None else 0)],
         }
         _insert_if_sth(temp_dict, 'aART', self.album_artist_str)
-        _inseet_if_sth(temp_dict, 'disk', self.disc_number)
+        _insert_if_sth(temp_dict, 'disk', self.disc_number)
         _insert_if_sth(temp_dict, '©cmt', self.comment)
         _insert_if_sth(temp_dict, '©lyr', self.lyrics)
         _insert_if_sth(temp_dict, '©day', self.date)
+        if 'disk' in temp_dict:
+            temp_dict['disk'] = (int(temp_disk['disk']), 0)
         if extra := self.mp4_extra():
             temp_dict.update(extra)
         return temp_dict
