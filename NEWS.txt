@@ -10,3 +10,12 @@ First published version
 
 * Fix a bug which makes audio file no correct extension name
 * Logs for download now show name for a descriptor rather than the URL
+
+--- Alpha 0.0.3 ---
+
+* Files with denied characters can be created by replacing them now
+* Support patch mode now
+* Improved NCM URL resolver
+* Detailed exception information are always printed now
+* Support .m4a and .mp4 files now
+* Compress cover image automatically when image size is larger than 2MB and OpenCV is available
