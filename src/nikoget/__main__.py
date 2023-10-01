@@ -66,7 +66,7 @@ def try_compress_image(image_data: bytes, limit=2097152):
         compressed = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), quality])[1]
         current_size = len(compressed)
 
-    logger.info('Image compression has done. Final quality is {quality}. Final size is {current_size}')
+    logger.info(f'Image compression has done. Final quality is {quality}. Final size is {current_size}')
 
     return compressed
 
