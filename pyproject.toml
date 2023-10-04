@@ -1,6 +1,6 @@
 [project]
 name = "nikoget"
-version = "0.0.1"
+version = "0.0.4"
 
 description = "Download something from internet sites"
 
