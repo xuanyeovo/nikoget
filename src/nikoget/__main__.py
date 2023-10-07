@@ -57,7 +57,7 @@ def try_compress_image(image_data: bytes, limit=2097152):
     img = cv2.imdecode(np.frombuffer(image_data, dtype=np.uint8), cv2.IMREAD_ANYCOLOR)
 
     current_size = len(image_data)
-    quality = 94
+    quality = 100
     while current_size >= limit:
         quality -= 2
         if quality < 5:
@@ -68,7 +68,7 @@ def try_compress_image(image_data: bytes, limit=2097152):
 
     logger.info(f'Image compression has done. Final quality is {quality}. Final size is {current_size}')
 
-    return compressed
+    return compressed.tobytes()
 
 def get_mime_by_ext(ext):
     '''
