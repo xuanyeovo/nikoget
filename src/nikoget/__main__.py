@@ -162,7 +162,7 @@ def download_audio(args, descriptor):
         cover_mime = cover_ctx.mime
     else:
         cover = None
-        cover_mine = None
+        cover_mime = None
 
     if descriptor.lyrics is not None:
         open(fix_path(os.path.join(args.output, descriptor.name) + '.lrc'), 'w').write(descriptor.lyrics)
