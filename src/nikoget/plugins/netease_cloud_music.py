@@ -9,7 +9,7 @@ import json
 import colorlog
 
 _ID = 'org.xuanyeovo.ncm'
-_VERSION = '0.0.1(20230908)'
+_VERSION = '0.0.2(20231005)'
 
 DATA_EXTRACTOR = re.compile('window\\.REDUX_STATE = ({.*});')
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Linux; Android 13; 23054RA19C Build/TP1A.220624.014) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.116 Mobile Safari/537.36'}
@@ -45,7 +45,7 @@ def _get_album(id):
         result['publish_time'] = album['publishTime']
         result['songs'] = list(map(extractor, info['Album']['songs']))
         result['artist'] = '/'.join(list(map(lambda x:x['name'], album['artists'])))
-        result['publish_time'] = time.strftime('%Y/%m/%d', time.localtime(album['publishTime']))
+        result['publish_time'] = time.strftime('%Y/%m/%d', time.localtime(album['publishTime'] / 1000))
     else:
         raise ResolveError('Cannot obtain album data from the page')
 
