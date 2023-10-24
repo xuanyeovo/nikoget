@@ -19,3 +19,8 @@ First published version
 * Detailed exception information are always printed now
 * Support .m4a and .mp4 files now
 * Compress cover image automatically when image size is larger than 2MB and OpenCV is available
+
+--- Alpha 0.0.4 ---
+
+* Add thin audio descriptor for faster audio resolving
+* NCM playlist is supported now

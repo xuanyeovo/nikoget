@@ -40,6 +40,8 @@ class Select:
         for i in range(len(items)):
             print('{}{}  {}'.format(i, ' ' * (number_bits - len(str(i))), items[i].display))
 
+        print('Select one from above items')
+
         while True:
             try:
                 user_input = int(input('Type a number: '))
@@ -64,4 +66,14 @@ class Select:
             except KeyboardInterrupt:
                 logger.debug('User aborted (KeyboardInterrupt)')
                 return None
+
+    def select_multi(self, limit=0, use_curses=True):
+        '''
+        Select multiple items
+
+        :param: limit The limit of number of items
+        :param: use_curses Whether use curses automatically if it is available
+        '''
+
+        
 

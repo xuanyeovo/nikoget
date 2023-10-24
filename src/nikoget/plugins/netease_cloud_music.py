@@ -1,12 +1,9 @@
-from nikoget.common import *
 from typing import Set
-import mutagen.id3
 import requests
-import urllib.parse
 import re
 import time
 import json
-import colorlog
+import urllib.parse
 
 _ID = 'org.xuanyeovo.ncm'
 _VERSION = '0.0.2(20231005)'
@@ -15,6 +12,23 @@ DATA_EXTRACTOR = re.compile('window\\.REDUX_STATE = ({.*});')
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Linux; Android 13; 23054RA19C Build/TP1A.220624.014) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.116 Mobile Safari/537.36'}
 
 ALBUM_CACHE = {}
+PLAYLIST_CACHE = {}
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) < 3:
+        print('[Error] Too few arguments')
+        exit(1)
+    if sys.argv[1] == 'raw_info':
+        req = requests.get(sys.argv[2], headers=HEADERS)
+        if result := DATA_EXTRACTOR.search(req.text):
+            jdata = json.loads(result.group(1))
+            print(json.dumps(jdata, indent=2, sort_keys=True, ensure_ascii=False))
+    exit(0)
+
+from nikoget.common import *
+import mutagen.id3
+import colorlog
 
 def _get_album(id):
     logger = colorlog.getLogger('nikoget')
@@ -37,8 +51,10 @@ def _get_album(id):
 
         def extractor(i):
             return {
+                'title': i['songName'],
+                'album': i['albumName'],
                 'id': i['id'],
-                'name': i['songName'],
+                'artist': i['singerName'].split(' / '),
             }
 
         result['name'] = album['name']
@@ -50,6 +66,42 @@ def _get_album(id):
         raise ResolveError('Cannot obtain album data from the page')
 
     ALBUM_CACHE[id] = result
+
+    return result
+
+def _get_playlist(id):
+    logger = colorlog.getLogger('nikoget')
+    logger.debug(f'Fetching info about playlist {id}')
+
+    if id in PLAYLIST_CACHE:
+        return PLAYLIST_CACHE[id]
+
+    result = {}
+
+    page_req = requests.get(f'https://y.music.163.com/m/playlist?id={id}', headers=HEADERS)
+
+    if jdata := DATA_EXTRACTOR.search(page_req.text):
+        info = json.loads(jdata.group(1))
+
+        pl = info['Playlist']
+
+        def extractor(i):
+            return {
+                'title': i['songName'],
+                'album': i['albumName'],
+                'id': i['id'],
+                'artist': i['singerName'].split(' / '),
+            }
+
+        result['songs'] = list(map(extractor, pl['data']))
+        result['name'] = pl['info']['name']
+        result['create_time'] = pl['info']['createTime']
+        result['creator_name'] = pl['info']['creator']['nickname']
+
+    else:
+        raise ResolveError('Cannot obtain playlist info from the page')
+
+    PLAYLIST_CACHE['id'] = result
 
     return result
 
@@ -88,15 +140,15 @@ class NcmPlugin(Plugin):
         return parsed_url.netloc in ['y.music.163.com', 'music.163.com']
 
     def resolve_url(self, url: str):
-        parsed_url = urllib.parse.urlparse(url)
+        parsed_url = urllib.parse.urlparse(url.replace('#', '%23'))
         if parsed_url.netloc in ['music.163.com', 'y.music.163.com']:
-            path = parsed_url.fragment.split('/') if '#' in url else parsed_url.path.split('/')
+            path = parsed_url.path.split('/')
             if len(path) < 2:
                 raise ResolveError('Incompleted URL path')
             else:
                 del(path[0])
 
-            if path[0] in ['m']:
+            if path[0] in ['m', '%23']:
                 del(path[0])
 
             query = urllib.parse.parse_qs(parsed_url.query)
@@ -108,9 +160,15 @@ class NcmPlugin(Plugin):
 
             elif path[0] == 'album':
                 if len(path) == 2:
-                    return list(map(lambda x:NcmAudio.from_id(x['id']), _get_album(path[1])['songs']))
+                    return list(map(lambda x:NcmThinAudio(**x), _get_album(path[1])['songs']))
                 elif len(path) == 1 and 'id' in query:
-                    return list(map(lambda x:NcmAudio.from_id(x['id']), _get_album(query['id'][0])['songs']))
+                    return list(map(lambda x:NcmThinAudio(**x), _get_album(query['id'][0])['songs']))
+
+            elif path[0] == 'playlist':
+                if len(path) == 2:
+                    return list(map(lambda x:NcmThinAudio(**x), _get_playlist(path[1])['songs']))
+                elif len(path) == 1 and 'id' in query:
+                    return list(map(lambda x:NcmThinAudio(**x), _get_playlist(query['id'][0])['songs']))
 
             else:
                 raise ResolveError('Unsupported type')
@@ -123,6 +181,18 @@ class NcmPlugin(Plugin):
 
     def version(self)-> str:
         return _VERSION
+
+class NcmThinAudio(ThinAudioDescriptor):
+    def __init__(self, id, title, artist, album):
+        super().__init__()
+
+        self.title = title
+        self.artist = artist
+        self.album = album
+        self.ncm_id = id
+
+    def to_full(self):
+        return NcmAudio.from_id(self.ncm_id)
 
 class NcmAudio(AudioDescriptor):
     def __init__(self):
@@ -238,3 +308,4 @@ class NcmAudio(AudioDescriptor):
         id3_obj.add(nid)
 
 plugin = NcmPlugin()
+
