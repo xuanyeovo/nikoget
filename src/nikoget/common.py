@@ -153,6 +153,27 @@ class DownloadContext:
         self.lock.release()
         return temp
 
+class ThinAudioDescriptor(ABC):
+    def __init__(self):
+        self.title = ''
+        self.artist = []
+        self.album = ''
+
+    @property
+    def artist_str(self):
+        return '/'.join(self.artist)
+
+    @property
+    def name(self):
+        return '{0} - {1}'.format(self.artist_str.replace('/', ', '), self.title)
+
+    @abstractmethod
+    def to_full(self):
+        '''
+        Convert this thin descriptor into normal descriptor.
+        '''
+        pass
+
 class AudioDescriptor(ABC):
     def __init__(self):
         self.title = ''

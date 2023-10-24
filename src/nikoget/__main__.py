@@ -238,6 +238,9 @@ def download(args):
     logger = colorlog.getLogger('nikoget')
 
     def deliver_download(descriptor):
+        if isinstance(descriptor, ThinAudioDescriptor):
+            descriptor = descriptor.to_full()
+
         if isinstance(descriptor, AudioDescriptor):
             download_audio(args, descriptor)
 
@@ -268,6 +271,9 @@ def patch(args):
     SUBCOMMAND_ARGS = args
 
     def deliver_patch(descriptor):
+        if isinstance(descriptor, ThinAudioDescriptor):
+            descriptor = descriptor.to_full()
+
         if isinstance(descriptor, AudioDescriptor):
             mime = get_mime_by_ext(os.path.splitext(args.file)[-1])
 
