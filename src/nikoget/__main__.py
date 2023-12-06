@@ -113,68 +113,72 @@ def download_audio(args, descriptor):
     audio_tmpfile_path = fix_path(os.path.join(args.output, 'tmp_' + descriptor.name))
     audio_fd = open(audio_tmpfile_path, 'wb')
 
-    logger.info(f'Downloading audio "{descriptor.name}"')
+    select = args.select.split(',')
 
-    # Start the DownloadContext
-    audio_ctx = descriptor.download(audio_fd)
-    audio_ctx.run()
+    if 'audio' in select:
+        logger.info(f'Downloading audio "{descriptor.name}"')
 
-    # Wait for the mime type is ready to be read
-    while audio_ctx.headers_ready == False:
-        time.sleep(0.1)
+        # Start the DownloadContext
+        audio_ctx = descriptor.download(audio_fd)
+        audio_ctx.run()
 
-    if audio_ctx.mime in MIME_EXTENSIONS:
-        extension_name = MIME_EXTENSIONS[audio_ctx.mime]
-    else:
-        extension_name = ''
-    audio_file_path = fix_path(os.path.join(args.output, descriptor.name + extension_name))
+        # Wait for the mime type is ready to be read
+        while audio_ctx.headers_ready == False:
+            time.sleep(0.1)
 
-    pbar = tqdm(desc=descriptor.short_name, unit='MB', leave=False)
+        if audio_ctx.mime in MIME_EXTENSIONS:
+            extension_name = MIME_EXTENSIONS[audio_ctx.mime]
+        else:
+            extension_name = ''
+        audio_file_path = fix_path(os.path.join(args.output, descriptor.name + extension_name))
 
-    # Show the progress of audio download task
-    while audio_ctx.run_status == TaskStatus.running:
-        pbar.total = round(audio_ctx.total_size / 1048576, 2)
-        pbar.n = round(audio_ctx.downloaded_size / 1048576, 2)
-        pbar.refresh()
+        pbar = tqdm(desc=descriptor.short_name, unit='MB', leave=False)
 
-    audio_fd.close()
-    pbar.close()
-
-    # Download the album cover
-    if hasattr(descriptor, 'download_cover') and callable(descriptor.download_cover) and not args.no_cover:
-        logger.info(f'Download album cover for audio "{descriptor.name}"')
-
-        out = io.BytesIO()
-        pbar.desc = descriptor.short_name + '(Cover Image)'
-        cover_ctx = descriptor.download_cover(out)
-        cover_ctx.run()
-        while cover_ctx.run_status == TaskStatus.running:
-            pbar.total = cover_ctx.total_size / 1048576
-            pbar.n = cover_ctx.downloaded_size / 1048576
+        # Show the progress of audio download task
+        while audio_ctx.run_status == TaskStatus.running:
+            pbar.total = round(audio_ctx.total_size / 1048576, 2)
+            pbar.n = round(audio_ctx.downloaded_size / 1048576, 2)
             pbar.refresh()
+
+        audio_fd.close()
         pbar.close()
-    else:
-        out = None
-        cover_ctx = None
 
-    if out is not None:
-        cover = out.getvalue()
-        cover_mime = cover_ctx.mime
-    else:
-        cover = None
-        cover_mime = None
+        # Download the album cover
+        if hasattr(descriptor, 'download_cover') and callable(descriptor.download_cover) and not args.no_cover:
+            logger.info(f'Download album cover for audio "{descriptor.name}"')
 
-    if descriptor.lyrics is not None:
+            out = io.BytesIO()
+            pbar.desc = descriptor.short_name + '(Cover Image)'
+            cover_ctx = descriptor.download_cover(out)
+            cover_ctx.run()
+            while cover_ctx.run_status == TaskStatus.running:
+                pbar.total = cover_ctx.total_size / 1048576
+                pbar.n = cover_ctx.downloaded_size / 1048576
+                pbar.refresh()
+            pbar.close()
+        else:
+            out = None
+            cover_ctx = None
+
+        if out is not None:
+            cover = out.getvalue()
+            cover_mime = cover_ctx.mime
+        else:
+            cover = None
+            cover_mime = None
+
+    if 'lyrics' in select and descriptor.lyrics is not None:
         open(fix_path(os.path.join(args.output, descriptor.name) + '.lrc'), 'w').write(descriptor.lyrics)
 
-    patch_audio(
-        args,
-        audio_tmpfile_path, audio_ctx.mime,
-        descriptor,
-        cover, cover_mime
-    )
+    if 'audio' in select:
+        patch_audio(
+            args,
+            audio_tmpfile_path, audio_ctx.mime,
+            descriptor,
+            cover, cover_mime
+        )
 
-    os.rename(audio_tmpfile_path, audio_file_path)
+        os.rename(audio_tmpfile_path, audio_file_path)
 
 def patch_audio(args, audio_path, audio_mime, descriptor, cover=None, cover_mime=None):
     '''
@@ -240,8 +244,9 @@ def download(args):
     def deliver_download(descriptor):
         if isinstance(descriptor, ThinAudioDescriptor):
             descriptor = descriptor.to_full()
+            download_audio(args, descriptor)
 
-        if isinstance(descriptor, AudioDescriptor):
+        elif isinstance(descriptor, AudioDescriptor):
             download_audio(args, descriptor)
 
     for url in args.url:
@@ -375,6 +380,11 @@ def main():
         dest='no_compress_cover',
         action='store_true',
         help='Do not compress album cover larger than 2MB')
+    download_parser.add_argument(
+        '-s', '--select',
+        dest='select',
+        default='audio,lyric',
+        help='Select what resource to download')
     download_parser.set_defaults(func=download)
 
     patch_parser = subparsers.add_parser('patch', help='Patch a file')
