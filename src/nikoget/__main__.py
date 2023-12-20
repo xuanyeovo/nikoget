@@ -111,12 +111,12 @@ def download_audio(args, descriptor):
     logger = colorlog.getLogger('nikoget')
 
     audio_tmpfile_path = fix_path(os.path.join(args.output, 'tmp_' + descriptor.name))
-    audio_fd = open(audio_tmpfile_path, 'wb')
 
     select = args.select.split(',')
 
     if 'audio' in select:
         logger.info(f'Downloading audio "{descriptor.name}"')
+        audio_fd = open(audio_tmpfile_path, 'wb')
 
         # Start the DownloadContext
         audio_ctx = descriptor.download(audio_fd)
