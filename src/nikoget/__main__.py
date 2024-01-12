@@ -98,7 +98,7 @@ def fix_path(original_path)-> str:
         "
     '''
 
-    return re.sub('"', '`', re.sub(':\\*\\?\\|\\$', '', original_path)).replace('<', '(').replace('>', ')')
+    return re.sub('"', '`', re.sub(':|\\*|\\?|\\||\\$', '', original_path)).replace('<', '(').replace('>', ')')
 
 def download_audio(args, descriptor):
     '''
