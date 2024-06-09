@@ -37,7 +37,7 @@ def _get_album(id):
     if id in ALBUM_CACHE:
         return ALBUM_CACHE[id]
 
-    result = {}
+    result = { 'is_empty': False }
 
     page_req = requests.get(f'https://y.music.163.com/m/album?id={id}', headers=HEADERS)
 
@@ -45,7 +45,10 @@ def _get_album(id):
         info = json.loads(jdata.group(1))
 
         if 'album' not in info['Album']:
-            raise ResolveError('Incorrect album identifier')
+            #raise ResolveError('Incorrect album identifier')
+            logger.warn(f'No album found')
+            result['is_empty'] = True
+            return result
 
         album = info['Album']['album']
 
@@ -221,13 +224,13 @@ class NcmAudio(AudioDescriptor):
             self.track_number = '01'
             self._cover_url = info['al']['picUrl']
             album_info = _get_album(info['al']['id'])
-            for i in range(len(album_info['songs'])):
-                if id == album_info['songs'][i]['id']:
-                    self.track_number = '{:02}'.format(i + 1)
-                    break
-
-            self.album_artist = [album_info['artist']]
-            self.date = album_info['publish_time']
+            if not album_info.get('is_empty'):
+                for i in range(len(album_info['songs'])):
+                    if id == album_info['songs'][i]['id']:
+                        self.track_number = '{:02}'.format(i + 1)
+                        break
+                self.album_artist = [album_info['artist']]
+                self.date = album_info['publish_time']
             self.lyrics = _get_lyrics(id)
         else:
             raise ResolveError('Cannot obtain audio meta info from the page')
