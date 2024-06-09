@@ -84,7 +84,7 @@ def get_mime_by_ext(ext):
         if MIME_EXTENSIONS[k] == ext:
             return k
 
-def fix_path(original_path)-> str:
+def fix_path(directory, file_name)-> str:
     '''
     Name of a file include following characters can not be created successfully:
 
@@ -98,7 +98,11 @@ def fix_path(original_path)-> str:
         "
     '''
 
-    return re.sub('"', '`', re.sub(':|\\*|\\?|\\||\\$', '', original_path)).replace('<', '(').replace('>', ')')
+    file_name = re.sub('"', '`', re.sub(':|\\*|\\?|\\||\\$', '', file_name)) \
+        .replace('<', '(').replace('>', ')') \
+        .replace('/', ' ')
+
+    return os.path.join(directory, file_name)
 
 def download_audio(args, descriptor):
     '''
@@ -110,7 +114,7 @@ def download_audio(args, descriptor):
 
     logger = colorlog.getLogger('nikoget')
 
-    audio_tmpfile_path = fix_path(os.path.join(args.output, 'tmp_' + descriptor.name))
+    audio_tmpfile_path = fix_path(args.output, 'tmp_' + descriptor.name)
 
     select = args.select.split(',')
 
@@ -130,7 +134,7 @@ def download_audio(args, descriptor):
             extension_name = MIME_EXTENSIONS[audio_ctx.mime]
         else:
             extension_name = ''
-        audio_file_path = fix_path(os.path.join(args.output, descriptor.name + extension_name))
+        audio_file_path = fix_path(args.output, descriptor.name + extension_name)
 
         pbar = tqdm(desc=descriptor.short_name, unit='MB', leave=False)
 
@@ -168,7 +172,7 @@ def download_audio(args, descriptor):
             cover_mime = None
 
     if 'lyrics' in select and descriptor.lyrics is not None:
-        open(fix_path(os.path.join(args.output, descriptor.name) + '.lrc'), 'w').write(descriptor.lyrics)
+        open(fix_path(args.output, descriptor.name + '.lrc'), 'w').write(descriptor.lyrics)
 
     if 'audio' in select:
         patch_audio(
