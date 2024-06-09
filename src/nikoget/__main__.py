@@ -4,6 +4,7 @@ import json
 import traceback
 import mutagen.mp3
 import mutagen.mp4
+import mutagen.flac
 import mutagen.id3
 import io
 import os
@@ -24,6 +25,8 @@ MIME_EXTENSIONS = {
     'audio/mpeg': '.mp3',
     'audio/mpeg3': '.mp3',
     'audio/mp4': '.m4a',
+    'audio/flac': '.flac',
+    'audio/x-flac': '.flac',
     'video/mp4': '.mp4',
     'video/x-msvideo': '.avi',
     'video/quicktime': '.mov',
@@ -234,6 +237,24 @@ def patch_audio(args, audio_path, audio_mime, descriptor, cover=None, cover_mime
             mp4['covr'] = [mutagen.mp4.MP4Cover(data=cover, imageformat=cover_format)]
 
         mp4.save()
+
+    elif audio_mime in ['audio/flac', 'audio/x-flac']:
+
+        logger.debug('Patching FLAC file')
+
+        flac = mutagen.flac.FLAC(audio_path)
+        flac.update(descriptor.as_flac_dict())
+
+        if cover is not None:
+            pic = mutagen.flac.Picture()
+            pic.type = mutagen.id3.PictureType.COVER_FRONT
+            pic.mime = cover_mime
+            pic.data = cover
+
+            flac.clear_pictures()
+            flac.add_picture(pic)
+
+        flac.save()
 
     else:
 

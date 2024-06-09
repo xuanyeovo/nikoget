@@ -220,6 +220,18 @@ class AudioDescriptor(ABC):
             temp_dict.update(extra)
         return temp_dict
 
+    def as_flac_dict(self):
+        temp_dict = {
+            'title': [self.title],
+            'artist': [self.artist_str],
+            'album': [self.album],
+        }
+        _insert_if_sth(temp_dict, 'tracknumber', self.track_number)
+        _insert_if_sth(temp_dict, 'totaltracks', self.track_number_total)
+        _insert_if_sth(temp_dict, 'date', self.date)
+        _insert_if_sth(temp_dict, 'lyrics', self.lyrics)
+        return temp_dict
+
     def patch_id3(self, id3_obj):
         if self.lyrics is not None:
             lyrics_frame = USLT(encoding=3, desc='', lang='eng', text=self.lyrics)
