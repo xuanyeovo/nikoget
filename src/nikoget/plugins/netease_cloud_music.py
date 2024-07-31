@@ -297,8 +297,10 @@ class NcmAudio(AudioDescriptor):
 
         return DownloadContext(download)
 
-    def easymp3_extra(self):
-        return {}
+    def flac_extra(self):
+        return {
+            'netease_id': [f'{self.ncm_id}']
+        }
 
     def mp4_extra(self):
         return {

@@ -230,6 +230,8 @@ class AudioDescriptor(ABC):
         _insert_if_sth(temp_dict, 'totaltracks', self.track_number_total)
         _insert_if_sth(temp_dict, 'date', self.date)
         _insert_if_sth(temp_dict, 'lyrics', self.lyrics)
+        if extra := self.flac_extra():
+            temp_dict.update(extra)
         return temp_dict
 
     def patch_id3(self, id3_obj):
@@ -255,15 +257,15 @@ class AudioDescriptor(ABC):
     def short_name(self):
         return self.title
 
-    @abstractmethod
     def easymp3_extra(self):
         pass
 
-    @abstractmethod
     def mp4_extra(self):
         pass
 
-    @abstractmethod
+    def flac_extra(self):
+        pass
+
     def patch_id3_extra(self, id3_obj):
         pass
 
