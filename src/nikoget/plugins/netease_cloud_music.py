@@ -225,10 +225,17 @@ class NcmAudio(AudioDescriptor):
             self._cover_url = info['al']['picUrl']
             album_info = _get_album(info['al']['id'])
             if not album_info.get('is_empty'):
+                found_trkn = False
                 for i in range(len(album_info['songs'])):
-                    if id == album_info['songs'][i]['id']:
+                    if str(album_info['songs'][i]['id']) == id:
                         self.track_number = '{:02}'.format(i + 1)
+                        found_trkn = True
                         break
+
+                if not found_trkn:
+                    logger.warning(f'could not get track number of "{self.name}"')
+
+                self.track_number_total = '{:02}'.format(len(album_info['songs']))
                 self.album_artist = [album_info['artist']]
                 self.date = album_info['publish_time']
             self.lyrics = _get_lyrics(id)
